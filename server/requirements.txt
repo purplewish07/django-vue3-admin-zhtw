@@ -1,0 +1,13 @@
+Django
+django-cors-headers
+django-filter
+django-simple-history
+djangorestframework
+djangorestframework-simplejwt
+django-bulk-update-or-create
+django_extensions
+drf-yasg
+pymysql
+mysqlclient
+pandas
+drf-spectacular

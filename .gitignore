@@ -1,0 +1,4 @@
+unpackage/dist/*
+node_modules/*
+venv/
+.vscode/
