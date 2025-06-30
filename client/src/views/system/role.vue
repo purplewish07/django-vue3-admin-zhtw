@@ -7,7 +7,6 @@
         v-model="search"
         placeholder="輸入角色名稱進行搜索"
         style="width: 200px"
-        @keyup.enter="getRoleList"
       />
       <el-button
         class="filter-item"
@@ -42,7 +41,7 @@
           type="danger"
           size="small"
           :disabled="!checkPermission(['role_delete'])"
-          @click="handleDelete({ row, $index })"
+          @click="handleDelete(row)"
         ><el-icon><Delete /></el-icon></el-button>
       </el-table-column>
     </el-table>
@@ -94,7 +93,7 @@
               <el-tree
                 ref="permissionTree"
                 v-model:checked-keys="role.perms"
-                :data="routes"
+                :data="permtree"
                 show-checkbox
                 node-key="id"
                 :check-strictly="checkStrictly"
@@ -119,13 +118,13 @@ import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { genTree, deepClone } from '@/utils'
 import checkPermission from '@/utils/permission'
 import {
-  getRoutes,
   getRoleAll,
   createRole,
   deleteRole,
   updateRole
 } from '@/api/role'
 import { getOrgAll } from '@/api/org'
+import { getPermAll } from '@/api/perm'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const search = ref('')
@@ -134,9 +133,8 @@ const dialogVisible = ref(false)
 const dialogType = ref('new')
 const checkStrictly = ref(true)
 
-const tableData = ref([])
 const rolesList = ref([])
-const routes = ref([])
+const permtree = ref([])
 const orgData = ref([])
 
 const permissionTree = ref()
@@ -165,17 +163,17 @@ const dataOptions = [
 // 篩選資料
 const filteredData = computed(() => {
   const keyword = search.value.trim().toLowerCase()
-  const list = keyword
+  const filtered = keyword
     ? rolesList.value.filter(item =>
         item.name.toLowerCase().includes(keyword)
       )
     : rolesList.value
-  return list
+  return filtered
 })
 
-function getRoutesList() {
-  getRoutes().then(res => {
-    routes.value = genTree(res.data)
+function getPermData() {
+  getPermAll().then(res => {
+    permtree.value = genTree(res.data)
   })
 }
 
@@ -188,7 +186,6 @@ function getOrgData() {
 function getRoleList() {
   listLoading.value = true
   getRoleAll().then(res => {
-    tableData.value = res.data
     rolesList.value = res.data
     listLoading.value = false
   })
@@ -216,15 +213,15 @@ function handleEdit(row) {
   })
 }
 
-function handleDelete({ $index, row }) {
+function handleDelete(row) {
   ElMessageBox.confirm('確認刪除?', '警告', {
     confirmButtonText: '確認',
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
     await deleteRole(row.id)
-    tableData.value.splice($index, 1)
-    ElMessage.success('成功')
+    getRoleList()
+    ElMessage.success('成功刪除!')
   }).catch(err => {
     if (err !== 'cancel') {
       console.error(err)
@@ -249,23 +246,20 @@ async function confirmRole() {
   role.depts = role.datas === '自定義'
     ? deptsTree.value?.getCheckedKeys() || []
     : []
-
   const payload = { ...role }
   if (dialogType.value === 'edit') {
     await updateRole(payload.id, payload)
-    const i = tableData.value.findIndex(r => r.id === payload.id)
-    if (i !== -1) tableData.value.splice(i, 1, deepClone(payload))
   } else {
     await createRole(payload)
-    getRoleList()
   }
 
   dialogVisible.value = false
   ElMessage.success('成功')
+  getRoleList()
 }
 
 onMounted(() => {
-  getRoutesList()
+  getPermData()
   getOrgData()
   getRoleList()
 })

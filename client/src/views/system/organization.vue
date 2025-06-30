@@ -6,7 +6,6 @@
         placeholder="輸入部門名稱進行搜索"
         style="width: 200px"
         class="filter-item"
-        @keyup.enter="getList"
       />
       <el-button
         type="primary"
@@ -67,7 +66,7 @@
         <el-form-item label="隸屬" prop="parent">
           <el-tree-select
             v-model="org.parent"
-            :data="tableData"
+            :data="parentData"
             :props="{ value: 'id', label: 'name', children: 'children' }"
             check-strictly
             clearable
@@ -99,7 +98,7 @@ const listLoading = ref(true)
 const defaultOrg = { id: null, name: '', parent: null }
 const org = reactive({ ...defaultOrg })
 
-const tableData = ref([])
+const parentData = ref([])
 const orgList = ref([])
 const dialogVisible = ref(false)
 const dialogType = ref('new')
@@ -117,19 +116,19 @@ const dialogTitle = computed(() =>
 
 const filteredData = computed(() => {
   const keyword = search.value.trim().toLowerCase()
-  const list = keyword
+  const filtered = keyword
     ? orgList.value.filter(item =>
         item.name.toLowerCase().includes(keyword)
       )
     : orgList.value
-  return genTree(list)
+  return genTree(filtered)
 })
 
 function getList() {
   listLoading.value = true
   getOrgAll().then(res => {
     orgList.value = res.data
-    tableData.value = genTree(res.data)
+    parentData.value = genTree(res.data)
     listLoading.value = false
   })
 }
@@ -153,19 +152,18 @@ function handleDelete(row) {
     confirmButtonText: '確認',
     cancelButtonText: '取消',
     type: 'error'
+  }).then(async () => {
+    await deleteOrg(row.id)
+    getList()
+    ElMessage.success('成功刪除!')
   })
-    .then(async () => {
-      await deleteOrg(row.id)
-      getList()
-      ElMessage.success('成功刪除!')
-    })
-    .catch(err => {
-      if (err !== 'cancel') {
-        console.error(err)
-        ElMessage.error('刪除失敗')
-      }
-      // 若是 cancel，就靜默忽略
-    })
+  .catch(err => {
+    if (err !== 'cancel') {
+      console.error(err)
+      ElMessage.error('刪除失敗')
+    }
+    // 若是 cancel，就靜默忽略
+  })
 }
 
 function confirmOrg() {

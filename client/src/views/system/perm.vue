@@ -7,7 +7,6 @@
         v-model="search"
         placeholder="輸入權限名稱進行搜索"
         style="width: 200px"
-        @keyup.enter="getList"
       />
       <el-button
         type="primary"
@@ -34,7 +33,7 @@
       <el-table-column prop="type" label="類型" />
       <el-table-column prop="method" label="代號" />
       <el-table-column prop="sort" label="排序" />
-      <el-table-column label="操作" align="center" v-slot="{ row, $index }">
+      <el-table-column label="操作" align="center" v-slot="{ row }">
         <el-button
           type="primary"
           size="small"
@@ -45,7 +44,7 @@
           type="danger"
           size="small"
           :disabled="!checkPermission(['perm_delete'])"
-          @click="handleDelete({ row, $index })"
+          @click="handleDelete(row)"
         ><el-icon><Delete /></el-icon></el-button>
       </el-table-column>
     </el-table>
@@ -78,7 +77,7 @@
         <el-form-item label="父級" prop="parent">
           <el-tree-select
             v-model="perm.parent"
-            :data="tableData"
+            :data="parentData"
             :props="{ label: 'name', value: 'id', children: 'children' }"
             placeholder="父級"
             check-strictly
@@ -128,16 +127,17 @@ const rules = {
   method: [{ required: true, message: '請輸入代號', trigger: 'blur' }]
 }
 
-const tableData = ref([])
+const parentData = ref([])
 const permList = ref([])
 const formRef = ref()
 
 const filteredData = computed(() => {
   const keyword = search.value.trim().toLowerCase()
-  if (!keyword) return tableData.value
-  const filtered = permList.value.filter(item =>
-    item.name.toLowerCase().includes(keyword)
-  )
+  const filtered = keyword
+    ? permList.value.filter(item =>
+        item.name.toLowerCase().includes(keyword)
+      ) 
+    : permList.value
   return genTree(filtered)
 })
 
@@ -145,7 +145,7 @@ function getList() {
   listLoading.value = true
   getPermAll().then(res => {
     permList.value = res.data
-    tableData.value = genTree(res.data)
+    parentData.value = genTree(res.data)
     listLoading.value = false
   })
 }

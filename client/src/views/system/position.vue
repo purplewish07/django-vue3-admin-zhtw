@@ -6,7 +6,6 @@
         placeholder="輸入崗位名稱進行搜索"
         style="width: 200px"
         class="filter-item"
-        @keyup.enter="handleFilter"
       />
       <el-button
         type="primary"
@@ -29,37 +28,31 @@
       v-el-height-adaptive-table="{ bottomOffset: 50 }"
     >
       <el-table-column type="index" width="50" />
-      <el-table-column label="崗位名稱">
-        <template #default="{ row }">{{ row.name }}</template>
-      </el-table-column>
-      <el-table-column label="創建日期">
-        <template #default="{ row }">{{ row.create_time }}</template>
-      </el-table-column>
-      <el-table-column label="操作" align="center">
-        <template #default="{ row }">
-          <el-button
-            type="primary"
-            size="small"
-            :disabled="!checkPermission(['position_update'])"
-            @click="handleEdit(row)"
-          >
-            <el-icon><Edit /></el-icon>
-          </el-button>
-          <el-button
-            type="danger"
-            size="small"
-            :disabled="!checkPermission(['position_delete'])"
-            @click="handleDelete(row)"
-          >
-            <el-icon><Delete /></el-icon>
-          </el-button>
-        </template>
+      <el-table-column prop="name" label="崗位名稱" />
+      <el-table-column prop="create_time" label="創建日期" />
+      <el-table-column label="操作" align="center" v-slot="{ row }">
+        <el-button
+          type="primary"
+          size="small"
+          :disabled="!checkPermission(['position_update'])"
+          @click="handleEdit(row)"
+        >
+          <el-icon><Edit /></el-icon>
+        </el-button>
+        <el-button
+          type="danger"
+          size="small"
+          :disabled="!checkPermission(['position_delete'])"
+          @click="handleDelete(row)"
+        >
+          <el-icon><Delete /></el-icon>
+        </el-button>
       </el-table-column>
     </el-table>
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle">
       <el-form
-        ref="Form"
+        ref="formRef"
         :model="position"
         :rules="rules"
         label-width="80px"
@@ -78,9 +71,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, nextTick, getCurrentInstance, onMounted } from 'vue'
+import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { getPositionAll, createPosition, updatePosition, deletePosition } from '@/api/position'
-import { genTree, deepClone } from '@/utils'
+import { deepClone } from '@/utils'
 import checkPermission from '@/utils/permission'
 
 const defaultForm = { id: '', name: '' }
@@ -89,13 +82,10 @@ const search = ref('')
 const listLoading = ref(true)
 const dialogVisible = ref(false)
 const dialogType = ref('new')
-const tableData = ref([])
 const positionList = ref([])
 const position = reactive({ ...defaultForm })
 
-const { proxy } = getCurrentInstance()
-
-const Form = ref()
+const formRef = ref()
 const rules = {
   name: [{ required: true, message: '請輸入名稱', trigger: 'blur' }]
 }
@@ -107,57 +97,52 @@ const dialogTitle = computed(() =>
 const filteredData = computed(() => {
   const keyword = search.value.toLowerCase().trim()
   return keyword
-    ? tableData.value.filter(d => d.name.toLowerCase().includes(keyword))
-    : tableData.value
+    ? positionList.value.filter(d => d.name.toLowerCase().includes(keyword))
+    : positionList.value
 })
 
 function getList() {
   listLoading.value = true
   getPositionAll().then(res => {
-    tableData.value = res.data
     positionList.value = res.data
     listLoading.value = false
   })
-}
-
-function handleFilter() {
-  const keyword = search.value.trim().toLowerCase()
-  const filtered = positionList.value.filter(item =>
-    item.name.toLowerCase().includes(keyword)
-  )
-  tableData.value = genTree(filtered)
 }
 
 function handleAdd() {
   Object.assign(position, defaultForm)
   dialogType.value = 'new'
   dialogVisible.value = true
-  nextTick(() => proxy.$refs['Form']?.clearValidate())
+  nextTick(() => formRef.value?.clearValidate())
 }
 
 function handleEdit(row) {
   Object.assign(position, deepClone(row))
   dialogType.value = 'edit'
   dialogVisible.value = true
-  nextTick(() => proxy.$refs['Form']?.clearValidate())
+  nextTick(() => formRef.value?.clearValidate())
 }
 
 function handleDelete(row) {
-  proxy.$confirm('確認刪除?', '警告', {
+  ElMessageBox.$confirm('確認刪除?', '警告', {
     confirmButtonText: '確認',
     cancelButtonText: '取消',
     type: 'error'
   }).then(async () => {
     await deletePosition(row.id)
     getList()
-    proxy.$message.success('成功刪除!')
+    ElMessage.success('成功刪除!')
   }).catch(err => {
-    if (err !== 'cancel') console.error(err)
+    if (err !== 'cancel') {
+      console.error(err)
+      ElMessage.error('刪除失敗')
+    }
+    // 若是 cancel，就靜默忽略
   })
 }
 
 function confirm() {
-  proxy.$refs['Form'].validate(valid => {
+  formRef.value.validate(valid => {
     if (!valid) return
 
     const isEdit = dialogType.value === 'edit'
@@ -168,7 +153,7 @@ function confirm() {
     api.then(() => {
       getList()
       dialogVisible.value = false
-      proxy.$message.success(isEdit ? '編輯成功' : '新增成功')
+      ElMessage.success(isEdit ? '編輯成功' : '新增成功')
     })
   })
 }

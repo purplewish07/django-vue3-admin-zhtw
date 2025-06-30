@@ -1,12 +1,5 @@
 import request from '@/utils/request'
 
-export function getRoutes() {
-  return request({
-    url: '/system/permission/',
-    method: 'get'
-  })
-}
-
 export function getRoleAll() {
   return request({
     url: '/system/role/',
