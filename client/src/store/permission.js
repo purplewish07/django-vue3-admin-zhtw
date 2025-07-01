@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { asyncRoutes, constantRoutes } from '@/router'
-import { useUserStore } from '@/store/user'
 
 /**
  * 檢查用戶是否有權限訪問該路由
@@ -8,34 +7,12 @@ import { useUserStore } from '@/store/user'
  * @param {Object} route 路由對像
  */
 function hasPermission(userPermissions, route) {
-  // if (!route.meta) {
-  //   return true
-  // }
-  if (route.meta && route.meta.userPermissions) {
-    return userPermissions.some(perm => route.meta.userPermissions.includes(perm))
+  console.log(route.meta)
+  if (route.meta && route.meta.perms) {
+    return userPermissions.some(perm => route.meta.perms.includes(perm))
   } else {
     return true
   }
-
-  // 檢查頁面權限
-  if (route.meta.pageId) {
-    if (userPermissions.includes(route.meta.pageId)) {
-      return true
-    }
-  }
-
-  // 檢查按鈕權限
-  if (route.meta.buttonIds) {
-    if (
-      route.meta.buttonIds.some((button) =>
-        userPermissions.includes(button.buttonId)
-      )
-    ) {
-      return true
-    }
-  }
-
-  return false
 }
 
 /**
@@ -45,23 +22,25 @@ function hasPermission(userPermissions, route) {
  */
 export function filterAsyncRoutes(routes, userPermissions) {
   const res = []
+  // console.log(routes)
+  // console.log(userPermissions)
 
   routes.forEach((route) => {
     const tmp = { ...route }
 
     // 檢查是否有子路由有權限
-    const hasChildPermission =
-      tmp.children && filterAsyncRoutes(tmp.children, userPermissions).length > 0
+    // const hasChildPermission =
+    //   tmp.children && filterAsyncRoutes(tmp.children, userPermissions).length > 0
 
     // 如果當前路由有權限或者子路由有權限，都應該保留當前路由
-    if (hasPermission(userPermissions, tmp) || hasChildPermission) {
+    // if (hasPermission(userPermissions, tmp) || hasChildPermission) {
+    if (hasPermission(userPermissions, tmp)) {
       if (tmp.children) {
         tmp.children = filterAsyncRoutes(tmp.children, userPermissions)
       }
       res.push(tmp)
     }
   })
-
   return res
 }
 

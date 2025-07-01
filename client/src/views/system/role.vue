@@ -205,8 +205,6 @@ function handleEdit(row) {
   dialogType.value = 'edit'
   dialogVisible.value = true
   Object.assign(role, deepClone(row))
-
-  console.log('role', role)
   nextTick(() => {
     permissionTree.value?.setCheckedKeys(role.perms)
     deptsTree.value?.setCheckedKeys(role.depts)
